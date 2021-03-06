@@ -26,7 +26,7 @@ def read_raw_file(data_path):
     for i in datalist:
         tar = tarfile.open(i, "r:gz")
         print(i)
-        print(tar.getmembers)
+        # print(tar.getmembers())
         for member in tar.getmembers():
             f = tar.extractfile(member)
             if member.name.find("Truth") == -1:
