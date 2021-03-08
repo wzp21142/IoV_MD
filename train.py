@@ -1,7 +1,22 @@
 import numpy as np
+import pandas as pd
+import os
+import tensorflow as tf
+
+'''single_step_window = WindowGenerator(
+    input_width=1, label_width=1, shift=1,
+    label_columns=['label'])
+single_step_window'''
+
+dataset_path = 'VeReMi-Dataset'
+type_path = 'timesorted_data'
+for directory in os.listdir(dataset_path):
+    train_df = pd.read_csv(os.path.join(dataset_path, directory, type_path, 'train_set_time_sorted.csv'))
+    val_df = pd.read_csv(os.path.join(dataset_path, directory, type_path, 'val_set_time_sorted.csv'))
+    test_df = pd.read_csv(os.path.join(dataset_path, directory, type_path, 'test_set_time_sorted.csv'))
 
 
-class WindowGenerator():
+class WindowGenerator:
     def __init__(self, input_width, label_width, shift,
                  train_df=train_df, val_df=val_df, test_df=test_df,
                  label_columns=None):
@@ -38,7 +53,124 @@ class WindowGenerator():
             f'Label column name(s): {self.label_columns}'])
 
 
-'''single_step_window = WindowGenerator(
+def make_dataset(self, data):
+    data = np.array(data, dtype=np.float32)
+    ds = tf.keras.preprocessing.timeseries_dataset_from_array(
+        data=data,
+        targets=None,
+        sequence_length=self.total_window_size,
+        sequence_stride=1,
+        shuffle=True,
+        batch_size=32, )
+
+    ds = ds.map(self.split_window)
+
+    return ds
+
+
+WindowGenerator.make_dataset = make_dataset
+
+
+@property
+def train(self):
+    return self.make_dataset(self.train_df)
+
+
+@property
+def val(self):
+    return self.make_dataset(self.val_df)
+
+
+@property
+def test(self):
+    return self.make_dataset(self.test_df)
+
+
+@property
+def example(self):
+    """Get and cache an example batch of `inputs, labels` for plotting."""
+    result = getattr(self, '_example', None)
+    if result is None:
+        # No example batch was found, so get one from the `.train` dataset
+        result = next(iter(self.train))
+        # And cache it for next time
+        self._example = result
+    return result
+
+
+WindowGenerator.train = train
+WindowGenerator.val = val
+WindowGenerator.test = test
+WindowGenerator.example = example
+
+
+class Baseline(tf.keras.Model):
+    def __init__(self, label_index=None):
+        super().__init__()
+        self.label_index = label_index
+
+    def call(self, inputs):
+        if self.label_index is None:
+            return inputs
+        result = inputs[:, :, self.label_index]
+        return result[:, :, tf.newaxis]
+
+
+def split_window(self, features):
+    inputs = features[:, self.input_slice, :]
+    labels = features[:, self.labels_slice, :]
+    if self.label_columns is not None:
+        labels = tf.stack(
+            [labels[:, :, self.column_indices[name]] for name in self.label_columns],
+            axis=-1)
+
+    # Slicing doesn't preserve static shape information, so set the shapes
+    # manually. This way the `tf.data.Datasets` are easier to inspect.
+    inputs.set_shape([None, self.input_width, None])
+    labels.set_shape([None, self.label_width, None])
+
+    return inputs, labels
+
+
+WindowGenerator.split_window = split_window
+
+single_step_window = WindowGenerator(
     input_width=1, label_width=1, shift=1,
     label_columns=['label'])
-single_step_window'''
+
+column_indices = {name: i for i, name in enumerate(train_df.columns)}
+baseline = Baseline(label_index=column_indices['label'])
+
+baseline.compile(loss=tf.losses.MeanSquaredError(),
+                 metrics=[tf.metrics.MeanAbsoluteError()])
+
+val_performance = {}
+performance = {}
+# val_performance['Baseline'] = baseline.evaluate(single_step_window.val)
+# performance['Baseline'] = baseline.evaluate(single_step_window.test, verbose=0)
+
+linear = tf.keras.Sequential([
+    tf.keras.layers.Dense(units=1)
+])
+MAX_EPOCHS = 20
+
+
+def compile_and_fit(model, window, patience=2):
+    early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                      patience=patience,
+                                                      mode='min')
+
+    model.compile(loss=tf.losses.MeanSquaredError(),
+                  optimizer=tf.optimizers.Adam(),
+                  metrics=[tf.metrics.MeanAbsoluteError()])
+
+    history = model.fit(window.train, epochs=MAX_EPOCHS,
+                        validation_data=window.val,
+                        callbacks=[early_stopping])
+    return history
+
+
+history = compile_and_fit(linear, single_step_window)
+
+# val_performance['Linear'] = linear.evaluate(single_step_window.val)
+# performance['Linear'] = linear.evaluate(single_step_window.test, verbose=0)
