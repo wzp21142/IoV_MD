@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 import tensorflow as tf
+from autoencoder import *
+from preprocess import data_convert
 
 '''single_step_window = WindowGenerator(
     input_width=1, label_width=1, shift=1,
@@ -134,15 +136,26 @@ def split_window(self, features):
 
 WindowGenerator.split_window = split_window
 
+x_train, x_test, y_train, y_test = data_load()
+#AE_train(3, x_train, 10)
+x = AE_predict(x_test, y_test)
+df = pd.DataFrame(x)
+df = data_convert(df)
+df.columns = ['A', 'B', 'C', 'label']
+
+train_df = df[0: 20000]
+val_df = df[20000: 30000]
+test_df = df[30000: 40000]
+
 single_step_window = WindowGenerator(
     input_width=1, label_width=1, shift=1,
     label_columns=['label'])
 
-column_indices = {name: i for i, name in enumerate(train_df.columns)}
-baseline = Baseline(label_index=column_indices['label'])
+column_indices = {name: i for i, name in enumerate(df.columns)}
+'''baseline = Baseline(label_index=column_indices['label'])
 
-baseline.compile(loss=tf.losses.MeanSquaredError(),
-                 metrics=[tf.metrics.MeanAbsoluteError()])
+baseline.compile(loss='binary_crossentropy',
+                 metrics=[tf.metrics.MeanAbsoluteError()])'''
 
 val_performance = {}
 performance = {}
@@ -150,7 +163,8 @@ performance = {}
 # performance['Baseline'] = baseline.evaluate(single_step_window.test, verbose=0)
 
 linear = tf.keras.Sequential([
-    tf.keras.layers.Dense(units=1)
+    tf.keras.layers.Dense(units=4, activation='relu'),
+    tf.keras.layers.Dense(units=1, activation='sigmoid'),
 ])
 MAX_EPOCHS = 20
 
@@ -160,9 +174,9 @@ def compile_and_fit(model, window, patience=2):
                                                       patience=patience,
                                                       mode='min')
 
-    model.compile(loss=tf.losses.MeanSquaredError(),
-                  optimizer=tf.optimizers.Adam(),
-                  metrics=[tf.metrics.MeanAbsoluteError()])
+    model.compile(loss='binary_crossentropy',
+                  optimizer=tf.keras.optimizers.RMSprop(lr=0.005),
+                  metrics=[tf.metrics.MeanAbsoluteError(), 'accuracy'])
 
     history = model.fit(window.train, epochs=MAX_EPOCHS,
                         validation_data=window.val,

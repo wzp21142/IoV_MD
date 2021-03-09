@@ -1,7 +1,4 @@
-import os
 import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow.keras import layers, optimizers, losses, metrics
 from tensorflow.keras.layers import Dense
 from tensorflow.python.keras import Input
 from tensorflow.python.keras.callbacks import LearningRateScheduler
@@ -24,7 +21,7 @@ def data_load():
     return x_train, x_test, y_train, y_test
 
 
-def AE_train(encoding_dim,x_train,epochs_num):
+def AE_train(encoding_dim, x_train, epochs_num):
     # 编码层
     input_data = Input(shape=[29])
     encoded = Dense(24, activation='relu')(input_data)
@@ -54,7 +51,7 @@ def AE_train(encoding_dim,x_train,epochs_num):
     history = autoencoder.fit(x_train, x_train, epochs=epochs_num, batch_size=256, callbacks=[lrate])
 
     loss = history.history['loss']
-    epochs = range(1, epochs_num+1)
+    epochs = range(1, epochs_num + 1)
     plt.title('Loss')
     plt.plot(epochs, loss, 'blue', label='loss')
     plt.legend()
@@ -83,6 +80,12 @@ def draw_AE_result(_x):
     label_font = {'family': 'Times New Roman', 'weight': 'normal', 'size': 20}
     plt.xlabel('X', label_font)
     plt.ylabel('Y', label_font, rotation=38)  # y 轴名称旋转 38 度
-    ax.set_zlabel('Z', label_font)  # 因为 plt 不能设置 z 轴坐标轴名称，所以这里只能用 ax 轴来设置（当然，x 轴和 y 轴的坐标轴名称也可以用 ax 设置）
+    ax.set_zlabel('Z', label_font)
     plt.savefig('3D.jpg', bbox_inches='tight', dpi=2400)  # 保存图片，如果不设置 bbox_inches='tight'，保存的图片有可能显示不全
     plt.show()
+
+
+'''x_train, x_test, y_train, y_test = data_load()
+AE_train(3, x_train, 10)
+x = AE_predict(x_test, y_test)
+print('x')'''
