@@ -22,11 +22,10 @@ def read_raw_file(data_path):
     os.chdir(data_path)
     datalist = [i for i in os.listdir() if '.tar.gz' in i]
     first = True
-    data_set = None
+    new_data_set = None
     for i in datalist:
         tar = tarfile.open(i, "r:gz")
         print(i)
-        # print(tar.getmembers())
         for member in tar.getmembers():
             f = tar.extractfile(member)
             if member.name.find("Truth") == -1:
@@ -36,6 +35,7 @@ def read_raw_file(data_path):
                     label_s = int(member.name.split('/')[1].split('-')[3][1:])
                     omnet_ids = int(member.name.split('/')[1].split('-')[2])
                     t = pd.read_json(f.read(), lines=True)
+                    t.fillna(0.0, inplace=True)
                     for _ in range(len(t)):
                         label.append(label_s)
                         omnet_id.append(omnet_ids)
@@ -43,12 +43,12 @@ def read_raw_file(data_path):
                     t['omnet_id'] = omnet_id
                     t['label'] = label
                     if not first:
-                        data_set = pd.concat([data_set, t], axis=0, join='inner')
+                        new_data_set = pd.concat([new_data_set, t], axis=0, join='outer')
                     else:
-                        data_set = t
+                        new_data_set = t
                         first = False
-    data_set.loc[data_set['label'] != 0, 'label'] = 1
-    return data_set
+    new_data_set.loc[new_data_set['label'] != 0, 'label'] = 1
+    return new_data_set
 
 
 def data_convert(data):  # 数据正则与空值填充
