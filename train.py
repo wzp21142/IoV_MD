@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+from autoencoder import *
+from preprocess import data_convert
 
 mpl.rcParams['figure.figsize'] = (8, 6)
 mpl.rcParams['axes.grid'] = False
@@ -195,10 +197,9 @@ class Baseline(tf.keras.Model):
         return result[:, :, tf.newaxis]
 
 
-baseline = Baseline(label_index=column_indices['label'])
 
-baseline.compile(loss=tf.losses.MeanSquaredError(),
-                 metrics=[tf.metrics.MeanAbsoluteError()])
+baseline.compile(loss='binary_crossentropy',
+                 metrics=[tf.metrics.MeanAbsoluteError()])'''
 
 val_performance = {}
 performance = {}
@@ -210,7 +211,8 @@ wide_window = WindowGenerator(
     label_columns=['label'])
 
 linear = tf.keras.Sequential([
-    tf.keras.layers.Dense(units=1)
+    tf.keras.layers.Dense(units=4, activation='relu'),
+    tf.keras.layers.Dense(units=1, activation='sigmoid'),
 ])
 
 MAX_EPOCHS = 20
@@ -221,9 +223,9 @@ def compile_and_fit(model, window, patience=2):
                                                       patience=patience,
                                                       mode='min')
 
-    model.compile(loss=tf.losses.MeanSquaredError(),
-                  optimizer=tf.optimizers.Adam(),
-                  metrics=[tf.metrics.MeanAbsoluteError()])
+    model.compile(loss='binary_crossentropy',
+                  optimizer=tf.keras.optimizers.RMSprop(lr=0.005),
+                  metrics=[tf.metrics.MeanAbsoluteError(), 'accuracy'])
 
     history = model.fit(window.train, epochs=MAX_EPOCHS,
                         validation_data=window.val,
